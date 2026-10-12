@@ -1,0 +1,44 @@
+[
+  {
+    "timestamp": "2026-10-12T04:04:14Z",
+    "state": "running",
+    "elapsed": "2m21.8s",
+    "complete": 5180,
+    "interrupted": 0,
+    "rps": 46.0,
+    "vus": "000/050",
+    "target_url": "https://hdev.hmall.com/md/pda/itemPtc?slitmCd=2130717889",
+    "source": "k6-live",
+    "status": "running",
+    "exit_code": 0,
+    "summary": {
+      "metrics": {
+        "http_req_failed": "46.0%",
+        "http_req_duration": {
+          "p(95)": "230ms"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-12T04:10:32Z",
+    "state": "completed",
+    "elapsed": "5m00.0s",
+    "complete": 10819,
+    "interrupted": 0,
+    "rps": 36.0,
+    "vus": "000/050",
+    "target_url": "https://hdev.hmall.com/md/pda/itemPtc?slitmCd=2130717889",
+    "source": "k6-live",
+    "status": "failed",
+    "exit_code": 99,
+    "summary": {
+      "metrics": {
+        "http_req_failed": "87.38%",
+        "http_req_duration": {
+          "p(95)": "154.65ms"
+        }
+      }
+    }
+  }
+]

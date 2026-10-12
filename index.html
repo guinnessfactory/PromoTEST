@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hmall Promo Load Test</title>
+    <meta
+      name="description"
+      content="Hmall 기획전 페이지 부하 테스트 도구 소개 페이지. k6 기반으로 불규칙한 RPS 패턴을 생성해 프로모션 페이지 성능을 점검합니다."
+    />
+    <style>
+      :root {
+        --bg: #0b1020;
+        --bg-soft: #111827;
+        --panel: #151f32;
+        --panel-2: #18263f;
+        --text: #edf2ff;
+        --muted: #b7c3d9;
+        --brand: #63d0ff;
+        --brand-2: #7c9cff;
+        --accent: #68e0a3;
+        --warning: #ffd166;
+        --danger: #ff6b6b;
+        --border: rgba(255, 255, 255, 0.08);
+        --shadow: 0 18px 45px rgba(16, 24, 40, 0.35);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(99, 208, 255, 0.14), transparent 25%),
+          radial-gradient(circle at top right, rgba(124, 156, 255, 0.18), transparent 30%),
+          var(--bg);
+        color: var(--text);
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .container {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 0 20px;
+      }
+
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        backdrop-filter: blur(10px);
+        background: rgba(11, 16, 32, 0.75);
+        border-bottom: 1px solid var(--border);
+      }
+
+      .nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 72px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+
+      .brand-badge {
+        display: grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--brand), var(--brand-2));
+        color: #07111a;
+        font-weight: 900;
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 20px;
+        color: var(--muted);
+        font-size: 0.96rem;
+      }
+
+      .nav-links a:hover {
+        color: var(--text);
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 12px 18px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        color: var(--text);
+        transition: 0.2s ease;
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      .btn.primary {
+        background: linear-gradient(135deg, var(--brand), var(--brand-2));
+        color: #09131d;
+        border: none;
+        box-shadow: var(--shadow);
+      }
+
+      .btn.secondary {
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
+      }
+
+      .hero {
+        padding: 72px 0 48px;
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: 1.25fr 0.95fr;
+        gap: 32px;
+        align-items: center;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border: 1px solid rgba(99, 208, 255, 0.22);
+        border-radius: 999px;
+        background: rgba(99, 208, 255, 0.08);
+        color: var(--brand);
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 18px 0 16px;
+        font-size: clamp(2.5rem, 4vw, 4.3rem);
+        line-height: 1.08;
+        letter-spacing: -0.04em;
+      }
+
+      .hero p {
+        margin: 0;
+        max-width: 620px;
+        color: var(--muted);
+        font-size: 1.05rem;
+        line-height: 1.75;
+      }
+
+      .cta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-top: 28px;
+      }
+
+      .hero-card {
+        background: linear-gradient(180deg, rgba(21, 31, 50, 0.9), rgba(13, 18, 30, 0.9));
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        box-shadow: var(--shadow);
+        padding: 20px;
+      }
+
+      .metric-box {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 16px;
+      }
+
+      .metric {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 16px;
+      }
+
+      .metric .label {
+        display: block;
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      .metric strong {
+        display: block;
+        margin-top: 8px;
+        font-size: 1.5rem;
+      }
+
+      .panel {
+        margin-top: 42px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        padding: 28px;
+      }
+
+      .section-header {
+        margin-bottom: 20px;
+      }
+
+      .section-header h2 {
+        margin: 0 0 8px;
+        font-size: clamp(1.8rem, 2vw, 2.8rem);
+      }
+
+      .section-header p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 20px;
+      }
+
+      .feature {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 22px;
+      }
+
+      .feature .icon {
+        display: inline-grid;
+        place-items: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        background: rgba(99, 208, 255, 0.08);
+        color: var(--brand);
+        font-size: 1.2rem;
+        margin-bottom: 14px;
+      }
+
+      .feature h3 {
+        margin: 0 0 10px;
+        font-size: 1.2rem;
+      }
+
+      .feature p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.75;
+      }
+
+      .code-block {
+        background: #0a1220;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 18px 20px;
+        color: #dfeafc;
+        overflow-x: auto;
+        font-family: "Cascadia Code", "Consolas", monospace;
+        line-height: 1.7;
+      }
+
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 14px;
+      }
+
+      .step {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 18px;
+      }
+
+      .step strong {
+        display: inline-flex;
+        width: 32px;
+        height: 32px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        background: rgba(124, 156, 255, 0.12);
+        color: var(--brand);
+        margin-bottom: 10px;
+      }
+
+      .step p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .footer {
+        margin-top: 48px;
+        padding: 24px 0 56px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      @media (max-width: 900px) {
+        .hero-grid,
+        .grid,
+        .steps {
+          grid-template-columns: 1fr;
+        }
+
+        .nav-links {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="container nav">
+        <div class="brand">
+          <div class="brand-badge">P</div>
+          <span>Promo Load Test</span>
+        </div>
+        <nav class="nav-links">
+          <a href="#features">기능</a>
+          <a href="#how-it-works">동작 방식</a>
+          <a href="#usage">실행 방법</a>
+        </nav>
+        <a class="btn primary" href="#usage">테스트 실행</a>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="hero">
+        <div class="hero-grid">
+          <div>
+            <div class="eyebrow">k6 + irregular traffic</div>
+            <h1>프로모션 페이지를 현실처럼 시험해보세요.</h1>
+            <p>
+              이 도구는 Hmall 기획전 페이지를 대상으로 불규칙한 초당 요청량(RPS)을 생성해,
+              실제 사용자처럼 들쭉날쭉한 트래픽 패턴을 시뮬레이션합니다.
+              서버의 응답 속도, 실패율, 비정상 트래픽 대응 여부를 사전에 검증할 수 있습니다.
+            </p>
+            <div class="cta-row">
+              <a class="btn primary" href="#usage">지금 실행</a>
+              <a class="btn secondary" href="#features">기능 보기</a>
+            </div>
+          </div>
+
+          <div class="hero-card">
+            <div class="section-header">
+              <h2 style="font-size: 1.3rem; margin-bottom: 12px;">테스트 요약</h2>
+            </div>
+            <div class="metric-box">
+              <div class="metric">
+                <span class="label">RPS 범위</span>
+                <strong>10~50</strong>
+              </div>
+              <div class="metric">
+                <span class="label">구간 길이</span>
+                <strong>20초</strong>
+              </div>
+              <div class="metric">
+                <span class="label">테스트 시간</span>
+                <strong>5분</strong>
+              </div>
+              <div class="metric">
+                <span class="label">목표 지표</span>
+                <strong>p95 &lt; 3s</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="features" class="panel">
+        <div class="section-header">
+          <h2>핵심 기능</h2>
+          <p>실제 프로모션 이벤트 전 서버 상태를 점검할 수 있도록 설계된 부하 테스트입니다.</p>
+        </div>
+
+        <div class="grid">
+          <article class="feature">
+            <div class="icon">⚡</div>
+            <h3>불규칙한 부하</h3>
+            <p>
+              초 단위로 RPS를 랜덤하게 바꿔서 정적이 아닌 현실적인 트래픽 패턴을 흉내 냅니다.
+            </p>
+          </article>
+
+          <article class="feature">
+            <div class="icon">🧪</div>
+            <h3>실제 사용자 유사도</h3>
+            <p>
+              모바일/데스크톱/브라우저별 User-Agent를 섞어 실제 프로모션 페이지 접근 환경에 가깝게 구성합니다.
+            </p>
+          </article>
+
+          <article class="feature">
+            <div class="icon">📈</div>
+            <h3>결과 지표 추적</h3>
+            <p>
+              응답시간, 실패율, p95/p99, 요청 수를 확인하며 성능 임계값을 기준으로 판단합니다.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="how-it-works" class="panel">
+        <div class="section-header">
+          <h2>동작 방식</h2>
+          <p>k6의 ramping-arrival-rate를 사용해, 특정 시간 패턴 없이 무작위 추세를 형성합니다.</p>
+        </div>
+        <div class="code-block">
+          <pre>executor: 'ramping-arrival-rate'
+startRate: RPS_MIN
+timeUnit: '1s'
+stages: buildIrregularStages()</pre>
+        </div>
+      </section>
+
+      <section id="usage" class="panel">
+        <div class="section-header">
+          <h2>실행 방법</h2>
+          <p>로컬 환경에서 간단하게 시작할 수 있습니다.</p>
+        </div>
+
+        <div class="steps">
+          <div class="step">
+            <strong>1</strong>
+            <p>k6를 설치합니다.</p>
+          </div>
+          <div class="step">
+            <strong>2</strong>
+            <p>테스트 대상 URL을 실제 기획전 주소로 변경합니다.</p>
+          </div>
+          <div class="step">
+            <strong>3</strong>
+            <p>스크립트 실행 명령을 입력합니다.</p>
+          </div>
+          <div class="step">
+            <strong>4</strong>
+            <p>결과를 확인하고 서버 상태를 판단합니다.</p>
+          </div>
+        </div>
+
+        <div class="code-block" style="margin-top: 22px;">
+          <pre>k6 install
+k6 run promo-page-load-test.js
+
+# 결과 저장
+k6 run --out json=result.json promo-page-load-test.js</pre>
+        </div>
+      </section>
+
+      <section class="panel" id="live-results">
+        <div class="section-header">
+          <h2>실시간 결과</h2>
+          <p>최근 테스트 기록을 자동으로 불러와서 최신 상태를 표시합니다.</p>
+        </div>
+
+        <div class="metric-box" style="margin-top: 10px; margin-bottom: 18px;">
+          <div class="metric">
+            <span class="label">최종 상태</span>
+            <strong id="latest-status">loading...</strong>
+          </div>
+          <div class="metric">
+            <span class="label">최근 실패율</span>
+            <strong id="latest-failed">-</strong>
+          </div>
+          <div class="metric">
+            <span class="label">최근 p95</span>
+            <strong id="latest-p95">-</strong>
+          </div>
+          <div class="metric">
+            <span class="label">마지막 실행</span>
+            <strong id="latest-time">-</strong>
+          </div>
+        </div>
+
+        <div class="history-wrap" style="overflow-x:auto;">
+          <table style="width:100%; border-collapse: collapse; color: var(--text);">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border); text-align:left; color: var(--muted);">
+                <th style="padding: 12px 10px;">시간</th>
+                <th style="padding: 12px 10px;">상태</th>
+                <th style="padding: 12px 10px;">exit code</th>
+                <th style="padding: 12px 10px;">실패율</th>
+                <th style="padding: 12px 10px;">p95</th>
+              </tr>
+            </thead>
+            <tbody id="result-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container">Promo Load Test · Hmall promotion performance validation</div>
+    </footer>
+
+    <script>
+      async function loadResults() {
+        const tableBody = document.getElementById('result-table-body');
+        const latestStatus = document.getElementById('latest-status');
+        const latestFailed = document.getElementById('latest-failed');
+        const latestP95 = document.getElementById('latest-p95');
+        const latestTime = document.getElementById('latest-time');
+
+        try {
+          const response = await fetch('./result.json?ts=' + Date.now());
+          if (!response.ok) {
+            throw new Error('result.json not found');
+          }
+
+          const data = await response.json();
+          const items = Array.isArray(data) ? data : [];
+          const reversed = [...items].reverse().slice(0, 8);
+
+          tableBody.innerHTML = reversed.map(item => {
+            const summary = item.summary || {};
+            const metrics = summary.metrics || {};
+            const failedRate = metrics.http_req_failed || summary.http_req_failed || '-';
+            const p95 = metrics.http_req_duration && metrics.http_req_duration['p(95)'] ? metrics.http_req_duration['p(95)'] : summary.p95 || '-';
+            const ts = item.timestamp || '-';
+            const status = item.status || 'unknown';
+            const code = item.exit_code ?? '-';
+
+            return `
+              <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding: 12px 10px;">${ts}</td>
+                <td style="padding: 12px 10px;">${status}</td>
+                <td style="padding: 12px 10px;">${code}</td>
+                <td style="padding: 12px 10px;">${failedRate}</td>
+                <td style="padding: 12px 10px;">${p95}</td>
+              </tr>
+            `;
+          }).join('') || '<tr><td colspan="5" style="padding: 16px; color: var(--muted);">기록이 아직 없습니다.</td></tr>';
+
+          const latest = reversed[0] || null;
+          if (latest) {
+            const summary = latest.summary || {};
+            const metrics = summary.metrics || {};
+            latestStatus.textContent = latest.status || 'unknown';
+            latestFailed.textContent = metrics.http_req_failed || summary.http_req_failed || '-';
+            latestP95.textContent = metrics.http_req_duration && metrics.http_req_duration['p(95)'] ? metrics.http_req_duration['p(95)'] : summary.p95 || '-';
+            latestTime.textContent = latest.timestamp || '-';
+          }
+        } catch (error) {
+          tableBody.innerHTML = '<tr><td colspan="5" style="padding: 16px; color: var(--muted);">결과 파일을 불러오지 못했습니다.</td></tr>';
+          latestStatus.textContent = 'unavailable';
+          latestFailed.textContent = '-';
+          latestP95.textContent = '-';
+          latestTime.textContent = '-';
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', loadResults);
+      setInterval(loadResults, 30000);
+    </script>
+  </body>
+</html>
